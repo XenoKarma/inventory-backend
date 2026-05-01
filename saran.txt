@@ -1,2 +1,13 @@
 🚀 Saran Improvement (Optional):
 Mau saya tambahkan indexes untuk performance & soft deletes? Atau lanjut ke pembuatan Models dengan Relationships?
+
+⚠️ Catatan (Next Improvement)
+Sekarang kita masih:
+Return raw JSON ❌
+Nanti kita upgrade ke:
+👉 API Resource (best practice) ✅
+
+⚠️ Best Practice Penting
+Jangan return raw model ❌
+Selalu pakai Resource ✅
+Gunakan eager loading (with) biar tidak N+1 query ✅

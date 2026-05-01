@@ -1,6 +1,12 @@
 <?php
 
 use App\Http\Controllers\API\AuthController;
+use App\Http\Controllers\CategoryController;
+use App\Http\Controllers\ProductController;
+use App\Http\Controllers\SupplierController;
+use App\Http\Controllers\WarehouseController;
+use App\Http\Controllers\ProductStockController;
+use App\Http\Controllers\StockMovementController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -59,23 +65,18 @@ Route::middleware('auth:sanctum')->group(function () {
             ]);
         });
     });
+
+    // Resource routes
+    Route::apiResource('categories', CategoryController::class);
+    Route::apiResource('products', ProductController::class);
+    Route::apiResource('suppliers', SupplierController::class);
+    Route::apiResource('warehouses', WarehouseController::class);
+    Route::apiResource('product-stocks', ProductStockController::class)->only(['index', 'show', 'update']);
+    Route::apiResource('stock-movements', StockMovementController::class)->except(['update', 'destroy']);
 });
 
-
-
-// API test route
-Route::middleware(['auth:sanctum', 'role:admin'])->group(function () {
-    Route::get('/admin-only', function () {
-        return "Only Admin";
-    });
-});
-Route::middleware(['auth:sanctum', 'role:staff'])->group(function () {
-    Route::get('/staff-only', function () {
-        return "Only Staff";
-    });
-});
 Route::get('/test', function () {
     return response()->json([
-        'message' => 'API is working 🚀'
+        'message' => 'API is working '
     ]);
 });
