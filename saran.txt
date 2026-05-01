@@ -1,0 +1,2 @@
+🚀 Saran Improvement (Optional):
+Mau saya tambahkan indexes untuk performance & soft deletes? Atau lanjut ke pembuatan Models dengan Relationships?
