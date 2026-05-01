@@ -12,13 +12,15 @@ class ProductStockController extends Controller
     public function index()
     {
         return ProductStockResource::collection(
-            ProductStock::with('product', 'warehouse')->latest()->get()
+            ProductStock::with('product', 'warehouse')->latest()->paginate(15)
         );
     }
 
     public function show(ProductStock $productStock)
     {
-        return new ProductStockResource($productStock->load('product', 'warehouse'));
+        return $this->successResponse(
+            new ProductStockResource($productStock->load('product', 'warehouse'))
+        );
     }
 
     public function update(Request $request, ProductStock $productStock)
@@ -29,6 +31,9 @@ class ProductStockController extends Controller
 
         $productStock->update($request->only('quantity'));
 
-        return new ProductStockResource($productStock->load('product', 'warehouse'));
+        return $this->successResponse(
+            new ProductStockResource($productStock->load('product', 'warehouse')),
+            'Stock updated successfully'
+        );
     }
 }

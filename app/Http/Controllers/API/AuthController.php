@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\Hash;
 
 class AuthController extends Controller
 {
-    //REGISTER
+    // REGISTER
     public function register(Request $request)
     {
         $request->validate([
@@ -31,11 +31,10 @@ class AuthController extends Controller
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        return response()->json([
-            'message' => 'User registered successfully',
-            'token' => $token,
+        return $this->createdResponse([
             'user' => $user->load('roles'),
-        ]);
+            'token' => $token,
+        ], 'User registered successfully');
     }
 
     // LOGIN
@@ -49,18 +48,15 @@ class AuthController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json([
-                'message' => 'Invalid credentials',
-            ], 401);
+            return $this->errorResponse('Invalid credentials', 401);
         }
 
         $token = $user->createToken('auth_token')->plainTextToken;
 
-        return response()->json([
-            'message' => 'Login successful',
+        return $this->successResponse([
+            'user' => $user->load('roles', 'permissions'),
             'token' => $token,
-            'user' => $user,
-        ]);
+        ], 'Login successful');
     }
 
     // LOGOUT
@@ -68,8 +64,6 @@ class AuthController extends Controller
     {
         $request->user()->tokens()->delete();
 
-        return response()->json([
-            'message' => 'Logged out successfully',
-        ]);
+        return $this->successResponse(null, 'Logged out successfully');
     }
 }

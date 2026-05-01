@@ -11,34 +11,42 @@ class SupplierController extends Controller
 {
     public function index()
     {
-        return SupplierResource::collection(Supplier::latest()->get());
+        return SupplierResource::collection(
+            Supplier::latest()->paginate(15)
+        );
     }
 
     public function store(StoreSupplierRequest $request)
     {
         $supplier = Supplier::create($request->validated());
 
-        return new SupplierResource($supplier);
+        return $this->createdResponse(
+            new SupplierResource($supplier),
+            'Supplier created successfully'
+        );
     }
 
     public function show(Supplier $supplier)
     {
-        return new SupplierResource($supplier);
+        return $this->successResponse(
+            new SupplierResource($supplier->load('products'))
+        );
     }
 
     public function update(StoreSupplierRequest $request, Supplier $supplier)
     {
         $supplier->update($request->validated());
 
-        return new SupplierResource($supplier);
+        return $this->successResponse(
+            new SupplierResource($supplier),
+            'Supplier updated successfully'
+        );
     }
 
     public function destroy(Supplier $supplier)
     {
         $supplier->delete();
 
-        return response()->json([
-            'message' => 'Supplier deleted successfully'
-        ]);
+        return $this->deletedResponse();
     }
 }

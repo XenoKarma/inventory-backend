@@ -17,7 +17,14 @@ Route::post('/login', [AuthController::class, 'login']);
 // Protected routes
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
-        return $request->user()->load('roles', 'permissions');
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'user' => $request->user()->load('roles', 'permissions'),
+                'roles' => $request->user()->getRoleNames(),
+                'permissions' => $request->user()->getAllPermissions()->pluck('name'),
+            ]
+        ]);
     });
     Route::post('/logout', [AuthController::class, 'logout']);
 
@@ -25,15 +32,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:admin')->group(function () {
         Route::get('/admin/dashboard', function (Request $request) {
             return response()->json([
+                'success' => true,
                 'message' => 'Welcome Admin!',
-                'user' => $request->user()->load('roles', 'permissions'),
+                'data' => $request->user()->load('roles', 'permissions'),
             ]);
         });
 
         Route::get('/admin/users', function (Request $request) {
             return response()->json([
-                'message' => 'User management - Admin only',
-                'users' => \App\Models\User::with('roles')->get(),
+                'success' => true,
+                'data' => \App\Models\User::with('roles', 'permissions')->get(),
             ]);
         });
     });
@@ -42,8 +50,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('role:staff')->group(function () {
         Route::get('/staff/dashboard', function (Request $request) {
             return response()->json([
+                'success' => true,
                 'message' => 'Welcome Staff!',
-                'user' => $request->user()->load('roles', 'permissions'),
+                'data' => $request->user()->load('roles', 'permissions'),
             ]);
         });
     });
@@ -52,6 +61,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:manage users')->group(function () {
         Route::get('/manage-users', function (Request $request) {
             return response()->json([
+                'success' => true,
                 'message' => 'You can manage users',
             ]);
         });
@@ -61,6 +71,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:view inventory')->group(function () {
         Route::get('/inventory', function (Request $request) {
             return response()->json([
+                'success' => true,
                 'message' => 'View inventory - accessible by both admin & staff',
             ]);
         });
@@ -73,10 +84,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('warehouses', WarehouseController::class);
     Route::apiResource('product-stocks', ProductStockController::class)->only(['index', 'show', 'update']);
     Route::apiResource('stock-movements', StockMovementController::class)->except(['update', 'destroy']);
+
+    // Stock history is a custom endpoint
+    Route::get('products/{product}/stock-history', [StockMovementController::class, 'stockHistory']);
 });
 
 Route::get('/test', function () {
     return response()->json([
+        'success' => true,
         'message' => 'API is working '
     ]);
 });

@@ -4,98 +4,81 @@ namespace App\Http\Controllers;
 
 use App\Http\Requests\StoreStockMovementRequest;
 use App\Http\Resources\StockMovementResource;
-use App\Models\ProductStock;
 use App\Models\StockMovement;
+use App\Traits\HasStockMovement;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 
 class StockMovementController extends Controller
 {
-    public function index()
+    use HasStockMovement;
+
+    public function index(Request $request)
     {
-        return StockMovementResource::collection(
-            StockMovement::with('product', 'fromWarehouse', 'toWarehouse', 'user')
-                ->latest()
-                ->get()
+        $query = StockMovement::with('product', 'fromWarehouse', 'toWarehouse', 'user');
+
+        // Filter by product
+        if ($request->has('product_id')) {
+            $query->where('product_id', $request->product_id);
+        }
+
+        // Filter by warehouse (either from or to)
+        if ($request->has('warehouse_id')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('from_warehouse_id', $request->warehouse_id)
+                  ->orWhere('to_warehouse_id', $request->warehouse_id);
+            });
+        }
+
+        // Filter by type
+        if ($request->has('type')) {
+            $query->where('type', $request->type);
+        }
+
+        return $this->successResponse(
+            StockMovementResource::collection(
+                $query->latest()->paginate($request->get('per_page', 15))
+            )
         );
     }
 
     public function store(StoreStockMovementRequest $request)
     {
-        return DB::transaction(function () use ($request) {
-            $data = $request->validated();
-            $data['user_id'] = $request->user()->id;
+        try {
+            $movement = $this->createStockMovement($request->validated(), $request->user()->id);
 
-            $movement = StockMovement::create($data);
-
-            // Update product_stocks based on movement type
-            if ($data['type'] === 'in') {
-                $this->handleIncomingStock($data);
-            } elseif ($data['type'] === 'out') {
-                $this->handleOutgoingStock($data);
-            } elseif ($data['type'] === 'transfer') {
-                $this->handleTransferStock($data);
-            }
-
-            return new StockMovementResource($movement->load('product', 'fromWarehouse', 'toWarehouse', 'user'));
-        });
+            return $this->createdResponse(
+                new StockMovementResource($movement->load('product', 'fromWarehouse', 'toWarehouse', 'user')),
+                'Stock movement recorded successfully'
+            );
+        } catch (\Exception $e) {
+            return $this->errorResponse($e->getMessage(), 400);
+        }
     }
 
     public function show(StockMovement $stockMovement)
     {
-        return new StockMovementResource($stockMovement->load('product', 'fromWarehouse', 'toWarehouse', 'user'));
-    }
-
-    protected function handleIncomingStock(array $data): void
-    {
-        $stock = ProductStock::firstOrCreate(
-            [
-                'product_id' => $data['product_id'],
-                'warehouse_id' => $data['to_warehouse_id'],
-            ],
-            ['quantity' => 0]
+        return $this->successResponse(
+            new StockMovementResource($stockMovement->load('product', 'fromWarehouse', 'toWarehouse', 'user'))
         );
-
-        $stock->increment('quantity', $data['quantity']);
     }
 
-    protected function handleOutgoingStock(array $data): void
+    public function stockHistory(Request $request, $productId)
     {
-        $stock = ProductStock::where([
-            'product_id' => $data['product_id'],
-            'warehouse_id' => $data['from_warehouse_id'],
-        ])->firstOrFail();
+        $query = StockMovement::with('product', 'fromWarehouse', 'toWarehouse', 'user')
+            ->where('product_id', $productId);
 
-        if ($stock->quantity < $data['quantity']) {
-            abort(400, 'Insufficient stock');
+        // Filter by warehouse
+        if ($request->has('warehouse_id')) {
+            $query->where(function ($q) use ($request) {
+                $q->where('from_warehouse_id', $request->warehouse_id)
+                  ->orWhere('to_warehouse_id', $request->warehouse_id);
+            });
         }
 
-        $stock->decrement('quantity', $data['quantity']);
-    }
-
-    protected function handleTransferStock(array $data): void
-    {
-        // Reduce from source
-        $fromStock = ProductStock::where([
-            'product_id' => $data['product_id'],
-            'warehouse_id' => $data['from_warehouse_id'],
-        ])->firstOrFail();
-
-        if ($fromStock->quantity < $data['quantity']) {
-            abort(400, 'Insufficient stock for transfer');
-        }
-
-        $fromStock->decrement('quantity', $data['quantity']);
-
-        // Add to destination
-        $toStock = ProductStock::firstOrCreate(
-            [
-                'product_id' => $data['product_id'],
-                'warehouse_id' => $data['to_warehouse_id'],
-            ],
-            ['quantity' => 0]
+        return $this->successResponse(
+            StockMovementResource::collection(
+                $query->latest()->paginate($request->get('per_page', 15))
+            )
         );
-
-        $toStock->increment('quantity', $data['quantity']);
     }
 }

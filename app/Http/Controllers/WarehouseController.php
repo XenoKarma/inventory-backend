@@ -11,34 +11,42 @@ class WarehouseController extends Controller
 {
     public function index()
     {
-        return WarehouseResource::collection(Warehouse::latest()->get());
+        return WarehouseResource::collection(
+            Warehouse::latest()->paginate(15)
+        );
     }
 
     public function store(StoreWarehouseRequest $request)
     {
         $warehouse = Warehouse::create($request->validated());
 
-        return new WarehouseResource($warehouse);
+        return $this->createdResponse(
+            new WarehouseResource($warehouse),
+            'Warehouse created successfully'
+        );
     }
 
     public function show(Warehouse $warehouse)
     {
-        return new WarehouseResource($warehouse);
+        return $this->successResponse(
+            new WarehouseResource($warehouse->load('productStocks.product'))
+        );
     }
 
     public function update(StoreWarehouseRequest $request, Warehouse $warehouse)
     {
         $warehouse->update($request->validated());
 
-        return new WarehouseResource($warehouse);
+        return $this->successResponse(
+            new WarehouseResource($warehouse),
+            'Warehouse updated successfully'
+        );
     }
 
     public function destroy(Warehouse $warehouse)
     {
         $warehouse->delete();
 
-        return response()->json([
-            'message' => 'Warehouse deleted successfully'
-        ]);
+        return $this->deletedResponse();
     }
 }
